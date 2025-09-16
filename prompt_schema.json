@@ -1,0 +1,35 @@
+{
+  "prompt": "Concise main description of the scene/subject. Lead with nouns; add concrete visual details (time of day, season, materials).",
+  "negative_prompt": "text, watermark, frame, border, logo, low-res, blurry, overexposed, underexposed",
+  "style": "photographic | illustration | watercolor | oil | art deco | cinematic",
+  "subject": "what’s in the image (people/objects/landscape)",
+  "environment": "location details, weather, era",
+  "composition": {
+    "shot": "wide | medium | close-up | macro | aerial",
+    "angle": "eye-level | low | high | tilt",
+    "framing": "rule of thirds | symmetrical | centered | leading lines",
+    "depth_of_field": "shallow | deep"
+  },
+  "camera": {
+    "camera_type": "full-frame DSLR | mirrorless | medium format",
+    "lens_focal_length_mm": 24,
+    "aperture": "f/2.8",
+    "shutter_speed": "1/250",
+    "iso": 100,
+    "focus": "infinity | subject | manual"
+  },
+  "lighting": {
+    "time_of_day": "golden hour",
+    "quality": "soft | hard",
+    "direction": "backlit | rim light | side light",
+    "atmosphere": "haze | fog | volumetric rays"
+  },
+  "color_palette": {
+    "primary": ["..."],
+    "secondary": ["..."]
+  },
+  "postprocess": {
+    "film_grain": "none | subtle",
+    "color_grade": "Kodak Portra | teal-orange | neutral"
+  }
+}

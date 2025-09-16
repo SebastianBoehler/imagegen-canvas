@@ -122,6 +122,7 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
   const preset = knownModel ? MODEL_INPUT_DEFAULTS[knownModel] ?? {} : {};
 
   const numImages = Number.parseInt(String(amount ?? "1"), 10);
+  const clampedCount = Number.isFinite(numImages) && numImages > 0 ? Math.min(numImages, 5) : 1;
 
   // for some reason, the reference files are sometimes empty
   const referenceFiles = formData.getAll("references").filter((file): file is File => file instanceof File && file.size > 0);
@@ -129,8 +130,13 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
   const input: Record<string, unknown> = {
     ...preset,
     prompt,
-    num_images: Number.isFinite(numImages) && numImages > 0 ? Math.min(numImages, 5) : 1,
   };
+
+  if (knownModel === "black-forest-labs/flux-krea-dev") {
+    input.num_outputs = clampedCount;
+  } else {
+    input.num_images = clampedCount;
+  }
 
   console.log("Reference files", referenceFiles);
   if (referenceFiles.length > 0) {

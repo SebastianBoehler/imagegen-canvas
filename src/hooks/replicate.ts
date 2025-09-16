@@ -4,6 +4,7 @@ export const IMAGE_GEN_MODELS = [
   "leonardoai/lucid-origin",
   "bytedance/seedream-4",
   "black-forest-labs/flux-1.1-pro",
+  "black-forest-labs/flux-krea-dev",
   "ideogram-ai/ideogram-v3-quality",
 ] as const satisfies readonly `${string}/${string}`[];
 
@@ -36,6 +37,17 @@ export const MODEL_INPUT_DEFAULTS: Partial<Record<ImageGenModel, Record<string, 
     output_format: "png",
     aspect_ratio: "16:9",
     safety_tolerance: 6, // highest tolerance
+  },
+  "black-forest-labs/flux-krea-dev": {
+    go_fast: false,
+    guidance: 2.5,
+    megapixels: "1",
+    aspect_ratio: "16:9",
+    output_format: "png",
+    output_quality: 100,
+    prompt_strength: 0.8,
+    num_inference_steps: 35, // max 50
+    disable_safety_checker: true,
   },
   "ideogram-ai/ideogram-v3-quality": {
     aspect_ratio: "16:9",
