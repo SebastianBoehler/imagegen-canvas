@@ -7,4 +7,5 @@ export type CanvasRenderable = {
   error: string | null;
   position: { x: number; y: number };
   createdAt?: number;
+  parentId?: string;
 };

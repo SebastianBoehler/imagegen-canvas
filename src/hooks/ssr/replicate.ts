@@ -1,7 +1,7 @@
 "use server";
 
 import Replicate from "replicate";
-import { IMAGE_GEN_MODELS, MODEL_INPUT_DEFAULTS } from "@/hooks/replicate";
+import { IMAGE_GEN_MODELS, MODEL_INPUT_DEFAULTS, UPSCALER_MODEL } from "@/hooks/replicate";
 import { saveImage } from "@/hooks/ssr/google";
 
 export type GenerateImagePayload = {
@@ -159,4 +159,22 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
   );
 
   return { images: uploaded };
+}
+
+export async function upscaleImage(imageUrl: string): Promise<string> {
+  if (typeof imageUrl !== "string" || !imageUrl) {
+    throw new Error("upscaleImage: imageUrl is required");
+  }
+
+  const input: Record<string, unknown> = { image: imageUrl };
+
+  const output = await replicate.run(UPSCALER_MODEL, { input });
+  const images = normalizeOutput(output);
+  const first = images[0];
+  if (!first) {
+    throw new Error("Upscaler returned no image");
+  }
+
+  const uploaded = await saveImage({ imageUrl: first, fileName: undefined, prompt: undefined });
+  return uploaded.publicUrl;
 }

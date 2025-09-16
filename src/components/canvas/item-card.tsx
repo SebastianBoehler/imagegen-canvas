@@ -12,9 +12,10 @@ type CanvasItemCardProps = {
   onFocus: (id: string) => void;
   zIndex: number;
   onRetry?: (id: string) => void;
+  onUpscale?: (id: string) => void;
 };
 
-export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry }: CanvasItemCardProps) {
+export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpscale }: CanvasItemCardProps) {
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -59,6 +60,7 @@ export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry }: Canva
   });
 
   const [isPreviewOpen, setPreviewOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const handleImageLoad = useCallback((e: SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget as HTMLImageElement | null;
@@ -84,6 +86,11 @@ export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry }: Canva
         height: `${size.height}px`,
       }}
       onPointerDown={handlePointerDown}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onFocus(item.id);
+        setMenuPos({ x: e.clientX, y: e.clientY });
+      }}
     >
       <div className="relative h-full w-full">
         {item.status === "pending" && (
@@ -159,6 +166,36 @@ export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry }: Canva
         <span className="truncate">{item.model}</span>
       </div>
       </div>
+
+      {/* Context menu */}
+      {menuPos ? (
+        <div
+          className="fixed inset-0 z-[9998]"
+          onClick={() => setMenuPos(null)}
+          onContextMenu={(e) => {
+            // prevent nested native context menu while ours is open
+            e.preventDefault();
+            setMenuPos(null);
+          }}
+        >
+          <div
+            className="absolute min-w-40 rounded-md border border-white/10 bg-slate-900/95 p-1 text-sm text-slate-100 shadow-xl backdrop-blur"
+            style={{ left: menuPos.x, top: menuPos.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="block w-full rounded px-3 py-2 text-left hover:bg-white/10"
+              onClick={() => {
+                setMenuPos(null);
+                onUpscale?.(item.id);
+              }}
+            >
+              Upscale
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Fullscreen preview modal */}
       {isPreviewOpen && item.imageUrl ? (

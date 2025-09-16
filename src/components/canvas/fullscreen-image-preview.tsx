@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 
+import { extFromUrl, formatBytes } from "@/hooks/helpers";
+
 export type FullscreenImagePreviewProps = {
   src: string;
   alt?: string;
@@ -10,29 +12,6 @@ export type FullscreenImagePreviewProps = {
   model?: string;
   onClose: () => void;
 };
-
-function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "-";
-  const units = ["B", "KB", "MB", "GB"] as const;
-  let value = bytes;
-  let i = 0;
-  while (value >= 1024 && i < units.length - 1) {
-    value /= 1024;
-    i += 1;
-  }
-  return `${value.toFixed(value < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
-}
-
-function extFromUrl(url: string): string | null {
-  try {
-    const u = new URL(url);
-    const m = u.pathname.toLowerCase().match(/\.([a-z0-9]{2,5})(?:$|\?)/);
-    return m ? m[1] : null;
-  } catch {
-    const m = url.toLowerCase().match(/\.([a-z0-9]{2,5})(?:$|\?)/);
-    return m ? m[1] : null;
-  }
-}
 
 export function FullscreenImagePreview({ src, alt, createdAt, model, onClose }: FullscreenImagePreviewProps) {
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);

@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { IMAGE_GEN_MODELS } from "@/hooks/replicate";
-import { generateTextToImage } from "@/hooks/ssr/replicate";
+import { IMAGE_GEN_MODELS, UPSCALER_MODEL } from "@/hooks/replicate";
+import { generateTextToImage, upscaleImage } from "@/hooks/ssr/replicate";
 import { Sidebar } from "./sidebar";
 import { CanvasWorkspace } from "./canvas/workspace";
 import type { PromptSubmissionMeta } from "./prompt/prompt-dock";
@@ -19,6 +19,7 @@ type CanvasItem = {
   error: string | null;
   position: { x: number; y: number };
   createdAt: number;
+  parentId?: string;
 };
 
 const INITIAL_OFFSET = { x: 160, y: 120 };
@@ -45,6 +46,48 @@ export default function CanvasPage() {
       prev.map((item) => (item.id === id ? { ...item, position: { x, y } } : item))
     );
   }, []);
+
+  const handleUpscaleItem = useCallback(async (id: string) => {
+    // Find source item
+    const source = items.find((it) => it.id === id);
+    if (!source || !source.imageUrl) return;
+
+    // Create a new placeholder item near the source
+    const newId = crypto.randomUUID();
+    const now = Date.now();
+    const placeholder = {
+      id: newId,
+      prompt: `${source.prompt} (upscaled ${source.model})`,
+      model: UPSCALER_MODEL,
+      imageUrl: null,
+      status: "pending" as CanvasItemStatus,
+      error: null as string | null,
+      position: { x: source.position.x + 48, y: source.position.y + 48 },
+      createdAt: now,
+      parentId: source.id,
+    } satisfies CanvasItem;
+
+    setItems((prev) => [...prev, placeholder]);
+    setActiveRequests((c) => c + 1);
+
+    try {
+      const upscaledUrl = await upscaleImage(source.imageUrl);
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === newId
+            ? { ...item, imageUrl: upscaledUrl, status: "complete" as CanvasItemStatus, error: null }
+            : item
+        )
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to upscale image";
+      setItems((prev) =>
+        prev.map((item) => (item.id === newId ? { ...item, status: "error" as CanvasItemStatus, error: message } : item))
+      );
+    } finally {
+      setActiveRequests((c) => Math.max(c - 1, 0));
+    }
+  }, [items]);
 
   const bringItemToFront = useCallback((id: string) => {
     setItems((prev) => {
@@ -196,6 +239,7 @@ export default function CanvasPage() {
           onMove={handleMoveItem}
           onFocus={bringItemToFront}
           onRetry={handleRetryItem}
+          onUpscale={handleUpscaleItem}
         />
         <PromptDock
           models={IMAGE_GEN_MODELS}

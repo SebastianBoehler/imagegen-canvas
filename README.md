@@ -3,6 +3,7 @@
 An experimental canvas UI for orchestrating AI-assisted image generation. Arrange generations spatially, iterate with prompts, attach reference images, and compare multiple versions on a persistent canvas.
 
 ![ImageGen Canvas screenshot](images/screenshot.png)
+![ImageGen Canvas screenshot 2](images/screenshot1.png)
 
 The app uses a collaborative workspace metaphor:
 
@@ -20,6 +21,11 @@ The app uses a collaborative workspace metaphor:
 - Status UI: pending spinner, error message surfaces.
 - Per-card model label overlay.
 - Keyboard UX: Enter to submit, Shift+Enter for a new line.
+- Full-resolution image preview with metadata overlay (created time, pixel size, type, file size) and a Download button (via `/api/download`).
+- Retry button on failed generations.
+- Right-click item menu with “Upscale ×4” (uses Replicate upscaler) and creates a new derived item.
+- Visual linking: derived items (e.g., upscales) are connected to their base image with a line that stays attached while moving.
+- Google Cloud Storage (GCS) integration: generated images are uploaded to a GCS bucket and served via `https://storage.googleapis.com/<bucket>/<object>`.
 
 See the evolving roadmap in `agents.md`.
 
@@ -39,10 +45,11 @@ bun install
 
 2) Configure environment
 
-Create `.env.local` in the project root with your Replicate token:
+Create `.env.local` in the project root with your Replicate token and GCS bucket name:
 
 ```bash
 REPLICATE_API_TOKEN=your_replicate_api_token_here
+GCS_BUCKET=your_public_bucket_name
 ```
 
 3) Run the app
@@ -59,6 +66,8 @@ Then open http://localhost:3000
 - Optionally attach reference images via “Attach references”.
 - New items appear on the canvas slightly offset and are draggable.
 - When the image finishes, the card resizes to the native aspect ratio and shows the full image (no cropping). The longest edge is capped for readability.
+- Right-click on a completed image to open the context menu, then choose “Upscale ×4” to generate a higher-resolution version via Replicate. A new card is added and visually linked to the original.
+- Hover an item and click the eye icon to open the full-resolution preview; use Download in the top-right to save the image.
 
 ## Configuration
 
@@ -67,11 +76,24 @@ Models and default inputs are defined in `src/hooks/replicate.ts`:
 - `IMAGE_GEN_MODELS`: list of selectable models (e.g. `black-forest-labs/flux-1.1-pro`).
 - `MODEL_INPUT_DEFAULTS`: per-model default inputs (e.g. aspect ratio, output format, etc.).
 
-The server-side generation handler lives in `src/hooks/ssr/replicate.ts` and uses the Replicate SDK. Reference files are read and sent as base64 `data:` URLs.
+The server-side generation handler lives in `src/hooks/ssr/replicate.ts` and uses the Replicate SDK. Reference files are read and sent as base64 `data:` URLs. Upscaling uses the configured `UPSCALER_MODEL` (see `src/hooks/replicate.ts`).
 
-Image delivery is allowed via Next Image configuration in `next.config.ts` (remote patterns for `replicate.com` and `replicate.delivery`).
+Image delivery is allowed via Next Image configuration in `next.config.ts` (remote patterns for `replicate.com`, `replicate.delivery`, and `storage.googleapis.com`).
 
 Card sizing behavior is controlled in `src/components/canvas/item-card.tsx` (`DEFAULT_SIDE` cap). Increase it for larger on-canvas previews.
+
+## Google Cloud Storage
+
+This project uploads generated images to a Google Cloud Storage bucket and returns public URLs for display.
+
+- Place your service account key file at the project root as `service-account.json` (this file is git-ignored).
+- Set `GCS_BUCKET` in `.env.local` to the name of your bucket.
+- The server uses `@google-cloud/storage` and reads credentials from `./service-account.json` only.
+- Next Image is configured to allow `storage.googleapis.com`.
+
+Notes:
+
+- For local dev, a public-read bucket is simplest. If you switch to a private bucket later, you can use signed URLs or proxy reads via an API route.
 
 ## Tech stack
 
@@ -79,6 +101,7 @@ Card sizing behavior is controlled in `src/components/canvas/item-card.tsx` (`DE
 - React 19
 - Tailwind CSS v4
 - Replicate Node SDK
+- Google Cloud Storage (`@google-cloud/storage`)
 
 ## Scripts
 
@@ -91,11 +114,11 @@ bun run lint   # lint
 
 ## Deploy
 
-On platforms like Vercel, set `REPLICATE_API_TOKEN` as an environment variable. The existing image remote patterns in `next.config.ts` are compatible with Replicate’s URLs.
+On platforms like Vercel, set `REPLICATE_API_TOKEN` and `GCS_BUCKET` as environment variables. You must also provide a `service-account.json` to the runtime (e.g., via a secure file mount or adjust the code to read credentials from an environment variable). The image remote patterns in `next.config.ts` cover Replicate and Google Cloud Storage.
 
 ## Roadmap / Ideas
 
-See `agents.md` for upcoming ideas such as retrying failed generations, full-resolution preview on hover/eye icon, canvas zoom, right-click item menu, persistence via cloud storage, and client-side settings (e.g. Zustand).
+See `agents.md` for upcoming ideas such as canvas zoom, richer right-click menus (download, edit, copy prompt, delete), variant linking/graph views, and persistence.
 
 ## Troubleshooting
 
