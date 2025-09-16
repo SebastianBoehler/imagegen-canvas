@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# gcp service account key (root only)
+/service-account.json
+
 # vercel
 .vercel
 

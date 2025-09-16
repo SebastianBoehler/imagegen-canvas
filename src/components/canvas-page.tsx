@@ -60,6 +60,50 @@ export default function CanvasPage() {
     });
   }, []);
 
+  const handleRetryItem = useCallback(async (id: string) => {
+    let snapshot: CanvasItem | undefined;
+    setItems((prev) => {
+      const next = prev.map((item) => {
+        if (item.id === id) {
+          snapshot = item;
+          return { ...item, status: "pending" as CanvasItemStatus, error: null, imageUrl: null };
+        }
+        return item;
+      });
+      return next;
+    });
+
+    if (!snapshot) return;
+
+    setActiveRequests((c) => c + 1);
+    try {
+      const formData = new FormData();
+      formData.set("prompt", snapshot.prompt);
+      formData.set("model", snapshot.model);
+      formData.set("numImages", "1");
+
+      const response = await generateTextToImage(formData);
+      const url = response.images[0] ?? null;
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? url
+              ? { ...item, imageUrl: url, status: "complete" as CanvasItemStatus, error: null }
+              : { ...item, status: "error" as CanvasItemStatus, error: "Retry returned no image" }
+            : item
+        )
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to retry generation";
+      setItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, status: "error" as CanvasItemStatus, error: message } : item))
+      );
+    } finally {
+      setActiveRequests((c) => Math.max(c - 1, 0));
+    }
+  }, []);
+
   const handlePromptSubmit = useCallback(
     async (formData: FormData, meta: PromptSubmissionMeta) => {
       const safeCount = clampImageCount(meta.numImages);
@@ -151,6 +195,7 @@ export default function CanvasPage() {
           items={items}
           onMove={handleMoveItem}
           onFocus={bringItemToFront}
+          onRetry={handleRetryItem}
         />
         <PromptDock
           models={IMAGE_GEN_MODELS}

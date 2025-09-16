@@ -2,6 +2,7 @@
 
 import Replicate from "replicate";
 import { IMAGE_GEN_MODELS, MODEL_INPUT_DEFAULTS } from "@/hooks/replicate";
+import { saveImage } from "@/hooks/ssr/google";
 
 export type GenerateImagePayload = {
   prompt: string;
@@ -114,7 +115,8 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
 
   const numImages = Number.parseInt(String(amount ?? "1"), 10);
 
-  const referenceFiles = formData.getAll("references").filter((file): file is File => file instanceof File);
+  // for some reason, the reference files are sometimes empty
+  const referenceFiles = formData.getAll("references").filter((file): file is File => file instanceof File && file.size > 0);
 
   const input: Record<string, unknown> = {
     ...preset,
@@ -122,6 +124,7 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
     num_images: Number.isFinite(numImages) && numImages > 0 ? Math.min(numImages, 5) : 1,
   };
 
+  console.log("Reference files", referenceFiles);
   if (referenceFiles.length > 0) {
     input.image_input = await Promise.all(
       referenceFiles.map(async (file) => {
@@ -134,6 +137,7 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
     );
   }
 
+  //console.log("Running replicate with input", input);
   const output = await replicate.run(modelIdentifier, { input });
   const images = normalizeOutput(output);
 
@@ -141,5 +145,18 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
     console.warn("Replicate returned no image URLs");
   }
 
-  return { images };
+  // Upload each image to GCS and return their public URLs
+  const uploaded = await Promise.all(
+    images.map(async (url) => {
+      try {
+        const result = await saveImage({ imageUrl: url, prompt });
+        return result.publicUrl;
+      } catch (err) {
+        console.error("Failed to upload image to GCS; falling back to original URL", err);
+        return url;
+      }
+    })
+  );
+
+  return { images: uploaded };
 }

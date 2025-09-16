@@ -22,8 +22,8 @@ export const MODEL_INPUT_DEFAULTS: Partial<Record<ImageGenModel, Record<string, 
   },
   "bytedance/seedream-4": {
     size: "custom",
-    width: 2048, // max 4096
-    height: 2048, // max 4096
+    width: 2560,
+    height: 1440,
   },
   "google/imagen-4-ultra": {
     output_format: "png",

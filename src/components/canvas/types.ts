@@ -6,4 +6,5 @@ export type CanvasRenderable = {
   status: "pending" | "complete" | "error";
   error: string | null;
   position: { x: number; y: number };
+  createdAt?: number;
 };
