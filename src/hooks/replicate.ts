@@ -9,7 +9,7 @@ export const IMAGE_GEN_MODELS = [
 
 export type ImageGenModel = (typeof IMAGE_GEN_MODELS)[number];
 
-export const UPSCALER_MODEL = "recraft-ai/recraft-crisp-upscale";
+export const UPSCALER_MODEL = "daanelson/real-esrgan-a100:f94d7ed4a1f7e1ffed0d51e4089e4911609d5eeee5e874ef323d2c7562624bed";
 
 export const MODEL_INPUT_DEFAULTS: Partial<Record<ImageGenModel, Record<string, unknown>>> = {
   "google/nano-banana": {

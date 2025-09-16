@@ -11,8 +11,16 @@ export type GenerateImagePayload = {
   referenceImages?: File[];
 };
 
+export type GeneratedImage = {
+  url: string;
+  storage?: {
+    bucket: string;
+    objectName: string;
+  };
+};
+
 export type GenerateImageResponse = {
-  images: string[];
+  images: GeneratedImage[];
 };
 
 const replicate = new Replicate({
@@ -150,10 +158,13 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
     images.map(async (url) => {
       try {
         const result = await saveImage({ imageUrl: url, prompt });
-        return result.publicUrl;
+        return {
+          url: result.publicUrl,
+          storage: { bucket: result.bucket, objectName: result.objectName },
+        } satisfies GeneratedImage;
       } catch (err) {
         console.error("Failed to upload image to GCS; falling back to original URL", err);
-        return url;
+        return { url } satisfies GeneratedImage;
       }
     })
   );
@@ -161,12 +172,15 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
   return { images: uploaded };
 }
 
-export async function upscaleImage(imageUrl: string): Promise<string> {
+export async function upscaleImage(imageUrl: string, scale: number = 4): Promise<GeneratedImage> {
   if (typeof imageUrl !== "string" || !imageUrl) {
     throw new Error("upscaleImage: imageUrl is required");
   }
 
-  const input: Record<string, unknown> = { image: imageUrl };
+  //TODO: auto set scale to max supported
+  // Input image of dimensions (1536, 2816, 3) has a total number of pixels 4325376 greater than the max size that fits in GPU memory on this hardware, 2096704. Resize input image and try again.
+
+  const input: Record<string, unknown> = { image: imageUrl, scale };
 
   const output = await replicate.run(UPSCALER_MODEL, { input });
   const images = normalizeOutput(output);
@@ -175,6 +189,14 @@ export async function upscaleImage(imageUrl: string): Promise<string> {
     throw new Error("Upscaler returned no image");
   }
 
-  const uploaded = await saveImage({ imageUrl: first, fileName: undefined, prompt: undefined });
-  return uploaded.publicUrl;
+  try {
+    const uploaded = await saveImage({ imageUrl: first, fileName: undefined, prompt: undefined });
+    return {
+      url: uploaded.publicUrl,
+      storage: { bucket: uploaded.bucket, objectName: uploaded.objectName },
+    } satisfies GeneratedImage;
+  } catch (err) {
+    console.error("Failed to upload upscaled image to GCS; falling back to original URL", err);
+    return { url: first } satisfies GeneratedImage;
+  }
 }

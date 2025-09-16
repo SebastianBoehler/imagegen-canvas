@@ -21,6 +21,11 @@ export type SaveImageResult = {
   objectName: string;
 };
 
+export type DeleteImageParams = {
+  bucket: string;
+  objectName: string;
+};
+
 let storageSingleton: Storage | null = null;
 
 function resolveCredentialsPath(): string {
@@ -134,4 +139,18 @@ export async function saveImage(params: SaveImageParams): Promise<SaveImageResul
     bucket,
     objectName,
   };
+}
+
+export async function deleteImage(params: DeleteImageParams): Promise<void> {
+  const { bucket, objectName } = params;
+
+  if (!bucket || !objectName) {
+    throw new Error("deleteImage: bucket and objectName are required");
+  }
+
+  const storage = getStorage();
+  const b = storage.bucket(bucket);
+  const file = b.file(objectName);
+
+  await file.delete({ ignoreNotFound: true });
 }

@@ -96,6 +96,7 @@ export function FullscreenImagePreview({ src, alt, createdAt, model, onClose }: 
             className="object-contain"
             sizes="(max-width: 1600px) 95vw, 95vw"
             priority={true}
+            unoptimized
             onLoadingComplete={(img) => {
               // next/image passes HTMLImageElement
               const el = img as unknown as HTMLImageElement;

@@ -8,4 +8,8 @@ export type CanvasRenderable = {
   position: { x: number; y: number };
   createdAt?: number;
   parentId?: string;
+  storage?: {
+    bucket: string;
+    objectName: string;
+  };
 };

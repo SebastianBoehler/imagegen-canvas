@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { IMAGE_GEN_MODELS, UPSCALER_MODEL } from "@/hooks/replicate";
 import { generateTextToImage, upscaleImage } from "@/hooks/ssr/replicate";
+import { deleteImage } from "@/hooks/ssr/google";
 import { Sidebar } from "./sidebar";
 import { CanvasWorkspace } from "./canvas/workspace";
 import type { PromptSubmissionMeta } from "./prompt/prompt-dock";
@@ -20,6 +21,10 @@ type CanvasItem = {
   position: { x: number; y: number };
   createdAt: number;
   parentId?: string;
+  storage?: {
+    bucket: string;
+    objectName: string;
+  };
 };
 
 const INITIAL_OFFSET = { x: 160, y: 120 };
@@ -65,6 +70,7 @@ export default function CanvasPage() {
       position: { x: source.position.x + 48, y: source.position.y + 48 },
       createdAt: now,
       parentId: source.id,
+      storage: undefined,
     } satisfies CanvasItem;
 
     setItems((prev) => [...prev, placeholder]);
@@ -75,14 +81,22 @@ export default function CanvasPage() {
       setItems((prev) =>
         prev.map((item) =>
           item.id === newId
-            ? { ...item, imageUrl: upscaledUrl, status: "complete" as CanvasItemStatus, error: null }
+            ? {
+                ...item,
+                imageUrl: upscaledUrl.url,
+                status: "complete" as CanvasItemStatus,
+                error: null,
+                storage: upscaledUrl.storage,
+              }
             : item
         )
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to upscale image";
       setItems((prev) =>
-        prev.map((item) => (item.id === newId ? { ...item, status: "error" as CanvasItemStatus, error: message } : item))
+        prev.map((item) =>
+          item.id === newId ? { ...item, status: "error" as CanvasItemStatus, error: message, storage: undefined } : item
+        )
       );
     } finally {
       setActiveRequests((c) => Math.max(c - 1, 0));
@@ -109,7 +123,13 @@ export default function CanvasPage() {
       const next = prev.map((item) => {
         if (item.id === id) {
           snapshot = item;
-          return { ...item, status: "pending" as CanvasItemStatus, error: null, imageUrl: null };
+          return {
+            ...item,
+            status: "pending" as CanvasItemStatus,
+            error: null,
+            imageUrl: null,
+            storage: undefined,
+          };
         }
         return item;
       });
@@ -126,21 +146,37 @@ export default function CanvasPage() {
       formData.set("numImages", "1");
 
       const response = await generateTextToImage(formData);
-      const url = response.images[0] ?? null;
+      const first = response.images[0];
+      const url = first?.url ?? null;
 
       setItems((prev) =>
         prev.map((item) =>
           item.id === id
             ? url
-              ? { ...item, imageUrl: url, status: "complete" as CanvasItemStatus, error: null }
-              : { ...item, status: "error" as CanvasItemStatus, error: "Retry returned no image" }
+              ? {
+                  ...item,
+                  imageUrl: url,
+                  status: "complete" as CanvasItemStatus,
+                  error: null,
+                  storage: first?.storage,
+                }
+              : {
+                  ...item,
+                  status: "error" as CanvasItemStatus,
+                  error: "Retry returned no image",
+                  storage: undefined,
+                }
             : item
         )
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to retry generation";
       setItems((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, status: "error" as CanvasItemStatus, error: message } : item))
+        prev.map((item) =>
+          item.id === id
+            ? { ...item, status: "error" as CanvasItemStatus, error: message, storage: undefined }
+            : item
+        )
       );
     } finally {
       setActiveRequests((c) => Math.max(c - 1, 0));
@@ -170,6 +206,7 @@ export default function CanvasPage() {
               y: INITIAL_OFFSET.y + index * ITEM_SPACING,
             },
             createdAt: now + index,
+            storage: undefined,
           });
         }
         return next;
@@ -189,12 +226,14 @@ export default function CanvasPage() {
               return item;
             }
 
-            const url = response.images[imageIndex] ?? null;
+            const result = response.images[imageIndex];
+            const url = result?.url ?? null;
             if (!url) {
               return {
                 ...item,
                 status: "error",
                 error: "Generation returned no image",
+                storage: undefined,
               };
             }
 
@@ -203,6 +242,7 @@ export default function CanvasPage() {
               imageUrl: url,
               status: "complete",
               error: null,
+              storage: result?.storage,
             };
           })
         );
@@ -219,6 +259,7 @@ export default function CanvasPage() {
                   ...item,
                   status: "error",
                   error: fallbackMessage,
+                  storage: undefined,
                 }
               : item
           )
@@ -230,6 +271,29 @@ export default function CanvasPage() {
     []
   );
 
+  const handleDeleteItem = useCallback(async (id: string) => {
+    let targetStorage: CanvasItem["storage"] | undefined;
+    setItems((prev) => {
+      const next: CanvasItem[] = [];
+      for (const item of prev) {
+        if (item.id === id) {
+          targetStorage = item.storage;
+          continue;
+        }
+        next.push(item);
+      }
+      return next;
+    });
+
+    if (targetStorage) {
+      try {
+        await deleteImage(targetStorage);
+      } catch (error) {
+        console.error("Failed to delete image from storage", error);
+      }
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex">
       <Sidebar />
@@ -240,6 +304,7 @@ export default function CanvasPage() {
           onFocus={bringItemToFront}
           onRetry={handleRetryItem}
           onUpscale={handleUpscaleItem}
+          onDelete={handleDeleteItem}
         />
         <PromptDock
           models={IMAGE_GEN_MODELS}

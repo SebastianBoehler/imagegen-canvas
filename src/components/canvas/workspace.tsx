@@ -10,9 +10,10 @@ type CanvasWorkspaceProps = {
   onFocus: (id: string) => void;
   onRetry?: (id: string) => void;
   onUpscale?: (id: string) => void;
+  onDelete?: (id: string) => void;
 };
 
-export function CanvasWorkspace({ items, onMove, onFocus, onRetry, onUpscale }: CanvasWorkspaceProps) {
+export function CanvasWorkspace({ items, onMove, onFocus, onRetry, onUpscale, onDelete }: CanvasWorkspaceProps) {
   const DEFAULT_SIDE = 192; // keep in sync with item-card sizing baseline
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
@@ -78,6 +79,7 @@ export function CanvasWorkspace({ items, onMove, onFocus, onRetry, onUpscale }: 
             onFocus={onFocus}
             onRetry={onRetry}
             onUpscale={onUpscale}
+            onDelete={onDelete}
             zIndex={index + 1}
           />
         ))}

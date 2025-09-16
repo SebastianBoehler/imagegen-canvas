@@ -13,9 +13,10 @@ type CanvasItemCardProps = {
   zIndex: number;
   onRetry?: (id: string) => void;
   onUpscale?: (id: string) => void;
+  onDelete?: (id: string) => void;
 };
 
-export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpscale }: CanvasItemCardProps) {
+export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpscale, onDelete }: CanvasItemCardProps) {
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -61,6 +62,36 @@ export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpsca
 
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+
+  const handleCopyPrompt = useCallback(() => {
+    const text = item.prompt ?? "";
+
+    const closeMenu = () => setMenuPos(null);
+    const fallbackCopy = () => {
+      if (typeof document === "undefined") return;
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "absolute";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand("copy");
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    };
+
+    // Prefer the async clipboard API when available.
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).catch(fallbackCopy).finally(closeMenu);
+      return;
+    }
+
+    fallbackCopy();
+    closeMenu();
+  }, [item.prompt]);
 
   const handleImageLoad = useCallback((e: SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget as HTMLImageElement | null;
@@ -186,12 +217,29 @@ export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpsca
             <button
               type="button"
               className="block w-full rounded px-3 py-2 text-left hover:bg-white/10"
+              onClick={handleCopyPrompt}
+            >
+              Copy prompt
+            </button>
+            <button
+              type="button"
+              className="block w-full rounded px-3 py-2 text-left hover:bg-white/10"
               onClick={() => {
                 setMenuPos(null);
                 onUpscale?.(item.id);
               }}
             >
               Upscale
+            </button>
+            <button
+              type="button"
+              className="block w-full rounded px-3 py-2 text-left text-red-300 hover:bg-red-500/10 hover:text-red-100"
+              onClick={() => {
+                setMenuPos(null);
+                onDelete?.(item.id);
+              }}
+            >
+              Delete
             </button>
           </div>
         </div>
