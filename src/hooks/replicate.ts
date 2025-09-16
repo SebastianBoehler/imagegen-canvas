@@ -4,6 +4,7 @@ export const IMAGE_GEN_MODELS = [
   "leonardoai/lucid-origin",
   "bytedance/seedream-4",
   "black-forest-labs/flux-1.1-pro",
+  "ideogram-ai/ideogram-v3-quality",
 ] as const satisfies readonly `${string}/${string}`[];
 
 export type ImageGenModel = (typeof IMAGE_GEN_MODELS)[number];
@@ -34,4 +35,16 @@ export const MODEL_INPUT_DEFAULTS: Partial<Record<ImageGenModel, Record<string, 
     aspect_ratio: "16:9",
     safety_tolerance: 6, // highest tolerance
   },
+  "ideogram-ai/ideogram-v3-quality": {
+    aspect_ratio: "16:9",
+  },
 };
+
+export const MODEL_COMMERCIAL_OK = new Set([
+  "google/imagen-4-ultra",
+  "google/nano-banana",
+  "black-forest-labs/flux-1.1-pro",
+  "leonardoai/lucid-origin",
+  "bytedance/seedream-4",
+  "ideogram-ai/ideogram-v3-quality",
+]);
