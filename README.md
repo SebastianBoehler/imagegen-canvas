@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ImageGen Canvas
 
-## Getting Started
+An experimental canvas UI for orchestrating AI-assisted image generation. Arrange generations spatially, iterate with prompts, attach reference images, and compare multiple versions on a persistent canvas.
 
-First, run the development server:
+![ImageGen Canvas screenshot](images/screenshot.png)
+
+The app uses a collaborative workspace metaphor:
+
+- A left-aligned sidebar for workspace actions.
+- A bottom-centered prompt dock for conversational generation.
+- A canvas where each generation is a draggable card that keeps the image’s native aspect ratio (no cropping).
+
+## Features
+
+- Draggable image cards on a spatial canvas (`src/components/canvas/`).
+- Dynamic card sizing to the image’s aspect ratio (no cropping, scaled to fit a cap).
+- Multi-version generation (1–5 outputs per prompt).
+- Model selection with sensible per-model defaults (`src/hooks/replicate.ts`).
+- Attach one or more reference images; they are sent as base64 data URIs to the model.
+- Status UI: pending spinner, error message surfaces.
+- Per-card model label overlay.
+- Keyboard UX: Enter to submit, Shift+Enter for a new line.
+
+See the evolving roadmap in `agents.md`.
+
+## Quick start
+
+Prereqs:
+
+- Node 18+ (recommended)
+- [Bun](https://bun.sh) 1.1+
+- A Replicate API token
+
+1) Install deps
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
+```
+
+2) Configure environment
+
+Create `.env.local` in the project root with your Replicate token:
+
+```bash
+REPLICATE_API_TOKEN=your_replicate_api_token_here
+```
+
+3) Run the app
+
+```bash
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Type a prompt in the bottom dock, choose a model and number of versions, then press Enter.
+- Optionally attach reference images via “Attach references”.
+- New items appear on the canvas slightly offset and are draggable.
+- When the image finishes, the card resizes to the native aspect ratio and shows the full image (no cropping). The longest edge is capped for readability.
 
-## Learn More
+## Configuration
 
-To learn more about Next.js, take a look at the following resources:
+Models and default inputs are defined in `src/hooks/replicate.ts`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `IMAGE_GEN_MODELS`: list of selectable models (e.g. `black-forest-labs/flux-1.1-pro`).
+- `MODEL_INPUT_DEFAULTS`: per-model default inputs (e.g. aspect ratio, output format, etc.).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The server-side generation handler lives in `src/hooks/ssr/replicate.ts` and uses the Replicate SDK. Reference files are read and sent as base64 `data:` URLs.
 
-## Deploy on Vercel
+Image delivery is allowed via Next Image configuration in `next.config.ts` (remote patterns for `replicate.com` and `replicate.delivery`).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Card sizing behavior is controlled in `src/components/canvas/item-card.tsx` (`DEFAULT_SIDE` cap). Increase it for larger on-canvas previews.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Tech stack
+
+- Next.js 15 (App Router)
+- React 19
+- Tailwind CSS v4
+- Replicate Node SDK
+
+## Scripts
+
+```bash
+bun dev      # start dev server (Turbopack)
+bun run build  # build (Turbopack)
+bun start    # run production server
+bun run lint   # lint
+```
+
+## Deploy
+
+On platforms like Vercel, set `REPLICATE_API_TOKEN` as an environment variable. The existing image remote patterns in `next.config.ts` are compatible with Replicate’s URLs.
+
+## Roadmap / Ideas
+
+See `agents.md` for upcoming ideas such as retrying failed generations, full-resolution preview on hover/eye icon, canvas zoom, right-click item menu, persistence via cloud storage, and client-side settings (e.g. Zustand).
+
+## Troubleshooting
+
+- Blank images: ensure `REPLICATE_API_TOKEN` is set and valid.
+- Images not loading: verify `next.config.ts` `images.remotePatterns` and that the URL host matches Replicate.
+- 429/limits: Replicate rate limiting may apply; reduce concurrent generations.
+
