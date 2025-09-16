@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 
@@ -17,6 +18,12 @@ export function FullscreenImagePreview({ src, alt, createdAt, model, onClose }: 
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
   const [contentType, setContentType] = useState<string | null>(null);
   const [contentLength, setContentLength] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   // Attempt a HEAD request to read type/size (works for public GCS)
   useEffect(() => {
@@ -50,7 +57,11 @@ export function FullscreenImagePreview({ src, alt, createdAt, model, onClose }: 
     }
   }, [createdAt]);
 
-  return (
+  if (!mounted) {
+    return null;
+  }
+
+  return createPortal(
     <div
       className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm"
       onClick={onClose}
@@ -118,6 +129,7 @@ export function FullscreenImagePreview({ src, alt, createdAt, model, onClose }: 
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { createPortal } from "react-dom";
+import { useCallback, useEffect, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, SyntheticEvent } from "react";
 import Image from "next/image";
 import type { CanvasRenderable } from "./types";
@@ -14,9 +15,10 @@ type CanvasItemCardProps = {
   onRetry?: (id: string) => void;
   onUpscale?: (id: string) => void;
   onDelete?: (id: string) => void;
+  scale?: number;
 };
 
-export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpscale, onDelete }: CanvasItemCardProps) {
+export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpscale, onDelete, scale = 1 }: CanvasItemCardProps) {
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -33,8 +35,8 @@ export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpsca
       target.classList.add("cursor-grabbing");
 
       const handlePointerMove = (moveEvent: PointerEvent) => {
-        const deltaX = moveEvent.clientX - startX;
-        const deltaY = moveEvent.clientY - startY;
+        const deltaX = (moveEvent.clientX - startX) / (scale || 1);
+        const deltaY = (moveEvent.clientY - startY) / (scale || 1);
         onMove(item.id, originX + deltaX, originY + deltaY);
       };
 
@@ -50,7 +52,7 @@ export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpsca
       window.addEventListener("pointerup", handlePointerUp);
       window.addEventListener("pointercancel", handlePointerUp);
     },
-    [item.id, item.position.x, item.position.y, onFocus, onMove]
+    [item.id, item.position.x, item.position.y, onFocus, onMove, scale]
   );
 
   // Dynamically size the card based on the loaded image's natural dimensions.
@@ -62,6 +64,12 @@ export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpsca
 
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [portalReady, setPortalReady] = useState(false);
+
+  useEffect(() => {
+    setPortalReady(true);
+    return () => setPortalReady(false);
+  }, []);
 
   const handleCopyPrompt = useCallback(() => {
     const text = item.prompt ?? "";
@@ -109,6 +117,7 @@ export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpsca
     <>
       <div
       role="group"
+      data-item-card
       className="group absolute rounded-lg overflow-hidden border border-white/10 bg-slate-900/80 shadow-xl shadow-black/40 backdrop-blur-sm cursor-grab select-none"
       style={{
         transform: `translate3d(${item.position.x}px, ${item.position.y}px, 0)`,
@@ -199,51 +208,54 @@ export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpsca
       </div>
 
       {/* Context menu */}
-      {menuPos ? (
-        <div
-          className="fixed inset-0 z-[9998]"
-          onClick={() => setMenuPos(null)}
-          onContextMenu={(e) => {
-            // prevent nested native context menu while ours is open
-            e.preventDefault();
-            setMenuPos(null);
-          }}
-        >
-          <div
-            className="absolute min-w-40 rounded-md border border-white/10 bg-slate-900/95 p-1 text-sm text-slate-100 shadow-xl backdrop-blur"
-            style={{ left: menuPos.x, top: menuPos.y }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="block w-full rounded px-3 py-2 text-left hover:bg-white/10"
-              onClick={handleCopyPrompt}
-            >
-              Copy prompt
-            </button>
-            <button
-              type="button"
-              className="block w-full rounded px-3 py-2 text-left hover:bg-white/10"
-              onClick={() => {
+      {menuPos && portalReady
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[9998]"
+              onClick={() => setMenuPos(null)}
+              onContextMenu={(e) => {
+                // prevent nested native context menu while ours is open
+                e.preventDefault();
                 setMenuPos(null);
-                onUpscale?.(item.id);
               }}
             >
-              Upscale
-            </button>
-            <button
-              type="button"
-              className="block w-full rounded px-3 py-2 text-left text-red-300 hover:bg-red-500/10 hover:text-red-100"
-              onClick={() => {
-                setMenuPos(null);
-                onDelete?.(item.id);
-              }}
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      ) : null}
+              <div
+                className="absolute min-w-40 rounded-md border border-white/10 bg-slate-900/95 p-1 text-sm text-slate-100 shadow-xl backdrop-blur"
+                style={{ left: menuPos.x, top: menuPos.y }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-white/10"
+                  onClick={handleCopyPrompt}
+                >
+                  Copy prompt
+                </button>
+                <button
+                  type="button"
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-white/10"
+                  onClick={() => {
+                    setMenuPos(null);
+                    onUpscale?.(item.id);
+                  }}
+                >
+                  Upscale
+                </button>
+                <button
+                  type="button"
+                  className="block w-full rounded px-3 py-2 text-left text-red-300 hover:bg-red-500/10 hover:text-red-100"
+                  onClick={() => {
+                    setMenuPos(null);
+                    onDelete?.(item.id);
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
 
       {/* Fullscreen preview modal */}
       {isPreviewOpen && item.imageUrl ? (
