@@ -1,0 +1,2 @@
+Imagegen Canvas is a web application that allows users to generate images using AI models
+in a canvas environment.
