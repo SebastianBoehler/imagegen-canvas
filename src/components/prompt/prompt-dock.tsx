@@ -167,7 +167,7 @@ export function PromptDock({ models, onSubmit, pending = false, attachedReferenc
             </div>
           </div>
         ) : null}
-        <div className="flex items-end gap-4 px-4 pt-4">
+        <div className="flex items-center gap-4 px-4 pt-4">
           <textarea
             name="prompt"
             value={prompt}
@@ -179,7 +179,7 @@ export function PromptDock({ models, onSubmit, pending = false, attachedReferenc
             className="flex-1 resize-none rounded-2xl bg-transparent text-base leading-relaxed text-white outline-none placeholder:text-slate-500"
             autoComplete="off"
           />
-          <div className="flex flex-col items-end gap-1 pb-1">
+          <div className="flex flex-col items-end gap-1">
             <button
               type="submit"
               disabled={disableSubmit}
