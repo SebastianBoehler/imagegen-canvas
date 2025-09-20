@@ -103,6 +103,7 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
   const prompt = formData.get("prompt");
   const model = formData.get("model");
   const amount = formData.get("numImages");
+  const aspectRatioValue = formData.get("aspectRatio");
 
   if (typeof prompt !== "string" || !prompt.trim()) {
     throw new Error("Prompt is required");
@@ -123,6 +124,8 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
 
   const numImages = Number.parseInt(String(amount ?? "1"), 10);
   const clampedCount = Number.isFinite(numImages) && numImages > 0 ? Math.min(numImages, 5) : 1;
+  const selectedAspectRatio =
+    typeof aspectRatioValue === "string" && (aspectRatioValue === "16:9" || aspectRatioValue === "9:16") ? (aspectRatioValue as "16:9" | "9:16") : undefined;
 
   // for some reason, the reference files are sometimes empty
   const referenceFiles = formData.getAll("references").filter((file): file is File => file instanceof File && file.size > 0);
@@ -149,6 +152,10 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
         return `data:${contentType};base64,${base64}`;
       })
     );
+  }
+
+  if (selectedAspectRatio) {
+    input.aspect_ratio = selectedAspectRatio;
   }
 
   //console.log("Running replicate with input", input);

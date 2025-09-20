@@ -15,18 +15,24 @@ export const UPSCALER_MODEL = "daanelson/real-esrgan-a100:f94d7ed4a1f7e1ffed0d51
 export const MODEL_INPUT_DEFAULTS: Partial<Record<ImageGenModel, Record<string, unknown>>> = {
   "google/nano-banana": {
     output_format: "png",
+    //always horizontal no aspect ratio support
   },
   "leonardoai/lucid-origin": {
     style: "none",
     contrast: "medium",
     aspect_ratio: "16:9",
-    prompt_enhance: true,
+    prompt_enhance: false,
     generation_mode: "ultra",
   },
   "bytedance/seedream-4": {
-    size: "custom",
-    width: 4096,
-    height: 2304,
+    //size: "custom",
+    // width: 4096,
+    // height: 2304,
+    aspect_ratio: "16:9",
+    size: "4K",
+    //sequential_image_generation: "auto",
+    //max_images: 15 //for sequential generation,
+    //image_input: [].
   },
   "google/imagen-4-ultra": {
     output_format: "png",

@@ -19,6 +19,7 @@ type CanvasItem = {
   status: CanvasItemStatus;
   error: string | null;
   position: { x: number; y: number };
+  aspectRatio: "16:9" | "9:16";
   createdAt: number;
   parentId?: string;
   storage?: {
@@ -68,6 +69,7 @@ export default function CanvasPage() {
       status: "pending" as CanvasItemStatus,
       error: null as string | null,
       position: { x: source.position.x + 48, y: source.position.y + 48 },
+      aspectRatio: source.aspectRatio,
       createdAt: now,
       parentId: source.id,
       storage: undefined,
@@ -144,6 +146,7 @@ export default function CanvasPage() {
       formData.set("prompt", snapshot.prompt);
       formData.set("model", snapshot.model);
       formData.set("numImages", "1");
+      formData.set("aspectRatio", snapshot.aspectRatio);
 
       const response = await generateTextToImage(formData);
       const first = response.images[0];
@@ -205,6 +208,7 @@ export default function CanvasPage() {
               x: INITIAL_OFFSET.x + index * ITEM_SPACING,
               y: INITIAL_OFFSET.y + index * ITEM_SPACING,
             },
+            aspectRatio: meta.aspectRatio,
             createdAt: now + index,
             storage: undefined,
           });
@@ -213,6 +217,7 @@ export default function CanvasPage() {
       });
 
       formData.set("numImages", String(safeCount));
+      formData.set("aspectRatio", meta.aspectRatio);
       setActiveRequests((count) => count + 1);
 
       try {

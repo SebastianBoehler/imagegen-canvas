@@ -131,3 +131,36 @@
 },
 "lighting": "soft diffused daylight, overcast sky with even tones"
 }
+
+{
+"prompt": "A photorealistic candid shot taken from inside a softly lit coastal room, looking out through an open doorway. Outside, a single yellow surfboard leans casually against a white wall, framed naturally by the doorway. The interior is not blacked out, but shows faint warm details of the walls and floor, softly illuminated by ambient light from the doorway. The scene feels calm, nostalgic, and unposed, blending the cozy indoor atmosphere with the bright sunlit outdoors.",
+"negative_prompt": "text, watermark, frame overlay, logo, overly dark interiors, polished perfection",
+"style": "Scandinavian minimalism meets surf lifestyle, fine art photography with hygge aesthetic",
+"composition": {
+"shot": "framed view through doorway",
+"angle": "eye-level from inside room",
+"framing": "natural frame created by the door edges",
+"foreground": "softly lit interior walls and floor with subtle texture",
+"background": "sunlit outdoor wall with surfboard"
+},
+"camera": {
+"camera_type": "35mm film camera, Kodak Portra 400",
+"lens": "35mm prime lens",
+"aperture": "f/4 for balance between indoor and outdoor exposure",
+"shutter_speed": "1/125 sec",
+"iso": "ISO 400",
+"focus": "sharp surfboard outdoors, interior softly detailed but not dominant"
+},
+"lighting": "soft natural daylight spilling into the room, balanced exposure so interior details are visible but slightly subdued against the brighter outdoor wall",
+"color_palette": {
+"primary": ["warm yellow surfboard", "sun-bleached white", "soft beige interior"],
+"secondary": ["pale sky blue outdoors", "subtle shadow grey"]
+},
+"aesthetic_tokens": [
+"wabi-sabi",
+"natural-looking",
+"slightly faded film tones",
+"everyday candid moment",
+"hygge photography"
+]
+}

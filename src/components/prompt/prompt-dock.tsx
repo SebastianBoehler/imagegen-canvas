@@ -9,6 +9,7 @@ export type PromptSubmissionMeta = {
   prompt: string;
   model: string;
   numImages: number;
+  aspectRatio: "16:9" | "9:16";
 };
 
 type PromptDockProps = {
@@ -25,6 +26,7 @@ export function PromptDock({ models, onSubmit, pending = false }: PromptDockProp
   const [model, setModel] = useState(models[0] ?? "");
   const [numImages, setNumImages] = useState(1);
   const [files, setFiles] = useState<File[]>([]);
+  const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
 
   const modelOptions = useMemo(() => models.map((value) => ({ value, label: value })), [models]);
 
@@ -78,9 +80,13 @@ export function PromptDock({ models, onSubmit, pending = false }: PromptDockProp
         ? Math.min(Math.max(parsedCount, 1), MAX_VARIATIONS)
         : 1;
 
+      const aspectRatioValue = String(formData.get("aspectRatio") ?? aspectRatio);
+      const normalizedAspectRatio = aspectRatioValue === "9:16" ? "9:16" : "16:9";
+
       formData.set("prompt", promptValue);
       formData.set("model", modelValue);
       formData.set("numImages", String(count));
+      formData.set("aspectRatio", normalizedAspectRatio);
 
       setPrompt("");
       setFiles([]);
@@ -90,6 +96,7 @@ export function PromptDock({ models, onSubmit, pending = false }: PromptDockProp
         prompt: promptValue,
         model: modelValue,
         numImages: count,
+        aspectRatio: normalizedAspectRatio,
       });
 
       if (submission instanceof Promise) {
@@ -98,7 +105,7 @@ export function PromptDock({ models, onSubmit, pending = false }: PromptDockProp
         });
       }
     },
-    [model, onSubmit, resetFileInput]
+    [aspectRatio, model, onSubmit, resetFileInput]
   );
 
   const disableSubmit = !prompt.trim();
@@ -179,6 +186,25 @@ export function PromptDock({ models, onSubmit, pending = false }: PromptDockProp
                   {option.label}
                 </option>
               ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 text-[11px] capitalize text-slate-300">
+            <label htmlFor="aspectRatio" className="text-slate-400">
+              Aspect
+            </label>
+            <select
+              id="aspectRatio"
+              name="aspectRatio"
+              value={aspectRatio}
+              onChange={(event) => setAspectRatio(event.target.value === "9:16" ? "9:16" : "16:9")}
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-100 outline-none transition hover:bg-white/10"
+            >
+              <option value="16:9" className="bg-slate-900 text-slate-100">
+                16:9 landscape
+              </option>
+              <option value="9:16" className="bg-slate-900 text-slate-100">
+                9:16 portrait
+              </option>
             </select>
           </div>
           <div className="flex items-center gap-2 text-[11px] capitalize text-slate-300">
