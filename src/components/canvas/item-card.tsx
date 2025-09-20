@@ -15,10 +15,11 @@ type CanvasItemCardProps = {
   onRetry?: (id: string) => void;
   onUpscale?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onAttachReference?: (id: string) => void;
   scale?: number;
 };
 
-export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpscale, onDelete, scale = 1 }: CanvasItemCardProps) {
+export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpscale, onDelete, onAttachReference, scale = 1 }: CanvasItemCardProps) {
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -230,6 +231,18 @@ export function CanvasItemCard({ item, onMove, onFocus, zIndex, onRetry, onUpsca
                   onClick={handleCopyPrompt}
                 >
                   Copy prompt
+                </button>
+                <button
+                  type="button"
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={!item.imageUrl}
+                  onClick={() => {
+                    if (!item.imageUrl) return;
+                    setMenuPos(null);
+                    onAttachReference?.(item.id);
+                  }}
+                >
+                  Use as reference
                 </button>
                 <button
                   type="button"

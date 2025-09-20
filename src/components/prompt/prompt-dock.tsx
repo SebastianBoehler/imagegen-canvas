@@ -10,15 +10,26 @@ export type PromptSubmissionMeta = {
   model: string;
   numImages: number;
   aspectRatio: "16:9" | "9:16";
+  referenceSourceIds: string[];
+};
+
+export type PromptAttachedReference = {
+  id: string;
+  sourceItemId: string;
+  remoteUrl: string;
+  previewUrl?: string;
+  label?: string;
 };
 
 type PromptDockProps = {
   models: readonly ImageGenModel[] | readonly string[];
   onSubmit: (formData: FormData, meta: PromptSubmissionMeta) => Promise<void> | void;
   pending?: boolean;
+  attachedReferences?: readonly PromptAttachedReference[];
+  onRemoveReference?: (id: string) => void;
 };
 
-export function PromptDock({ models, onSubmit, pending = false }: PromptDockProps) {
+export function PromptDock({ models, onSubmit, pending = false, attachedReferences = [], onRemoveReference }: PromptDockProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
@@ -88,6 +99,14 @@ export function PromptDock({ models, onSubmit, pending = false }: PromptDockProp
       formData.set("numImages", String(count));
       formData.set("aspectRatio", normalizedAspectRatio);
 
+      if (attachedReferences.length > 0) {
+        for (const reference of attachedReferences) {
+          if (reference.remoteUrl) {
+            formData.append("referenceUrls", reference.remoteUrl);
+          }
+        }
+      }
+
       setPrompt("");
       setFiles([]);
       resetFileInput();
@@ -97,6 +116,7 @@ export function PromptDock({ models, onSubmit, pending = false }: PromptDockProp
         model: modelValue,
         numImages: count,
         aspectRatio: normalizedAspectRatio,
+        referenceSourceIds: attachedReferences.map((reference) => reference.sourceItemId),
       });
 
       if (submission instanceof Promise) {
@@ -105,11 +125,12 @@ export function PromptDock({ models, onSubmit, pending = false }: PromptDockProp
         });
       }
     },
-    [aspectRatio, model, onSubmit, resetFileInput]
+    [aspectRatio, attachedReferences, model, onSubmit, resetFileInput]
   );
 
   const disableSubmit = !prompt.trim();
   const buttonLabel = "Generate";
+  const totalReferenceCount = files.length + attachedReferences.length;
 
   return (
     <form
@@ -164,12 +185,47 @@ export function PromptDock({ models, onSubmit, pending = false }: PromptDockProp
               className="hidden"
               onChange={handleFileChange}
             />
-            {files.length > 0 ? (
+            {totalReferenceCount > 0 ? (
               <span className="text-[11px] text-slate-400">
-                {files.length} file{files.length === 1 ? "" : "s"} attached
+                {totalReferenceCount} reference{totalReferenceCount === 1 ? "" : "s"} attached
               </span>
             ) : null}
           </div>
+          {attachedReferences.length > 0 ? (
+            <div className="flex items-center gap-2 text-[11px] capitalize text-slate-300">
+              <span className="text-slate-400">Canvas refs</span>
+              <div className="flex items-center gap-2">
+                {attachedReferences.map((reference) => {
+                  const preview = reference.previewUrl ?? reference.remoteUrl;
+                  return (
+                    <div
+                      key={reference.id}
+                      className="relative h-8 w-8 overflow-hidden rounded-md border border-white/10"
+                    >
+                      {/* Display thumbnail for attached reference (remote URL) */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={preview}
+                        alt={reference.label ?? "Reference image"}
+                        className="h-full w-full object-cover"
+                        draggable={false}
+                      />
+                      {onRemoveReference ? (
+                        <button
+                          type="button"
+                          onClick={() => onRemoveReference(reference.id)}
+                          className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/70 text-[10px] font-semibold text-white/80 ring-1 ring-white/20 transition hover:bg-black/90"
+                          aria-label="Remove reference"
+                        >
+                          ×
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           <div className="flex items-center gap-2 text-[11px] capitalize text-slate-300">
             <label htmlFor="model" className="text-slate-400">
               Model

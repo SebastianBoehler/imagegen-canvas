@@ -127,8 +127,11 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
   const selectedAspectRatio =
     typeof aspectRatioValue === "string" && (aspectRatioValue === "16:9" || aspectRatioValue === "9:16") ? (aspectRatioValue as "16:9" | "9:16") : undefined;
 
-  // for some reason, the reference files are sometimes empty
-  const referenceFiles = formData.getAll("references").filter((file): file is File => file instanceof File && file.size > 0);
+  const referenceEntries = formData.getAll("references");
+  const referenceFiles = referenceEntries.filter((file): file is File => file instanceof File && file.size > 0);
+  const referenceUrls = formData
+    .getAll("referenceUrls")
+    .filter((value): value is string => typeof value === "string" && value.length > 0);
 
   const input: Record<string, unknown> = {
     ...preset,
@@ -141,9 +144,12 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
     input.num_images = clampedCount;
   }
 
-  console.log("Reference files", referenceFiles);
+  console.log("Reference files", referenceFiles, "Reference urls", referenceUrls);
+
+  const normalizedReferences: string[] = [];
+
   if (referenceFiles.length > 0) {
-    input.image_input = await Promise.all(
+    const fileInputs = await Promise.all(
       referenceFiles.map(async (file) => {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
@@ -152,6 +158,29 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
         return `data:${contentType};base64,${base64}`;
       })
     );
+    normalizedReferences.push(...fileInputs);
+  }
+
+  if (referenceUrls.length > 0) {
+    for (const url of referenceUrls) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Reference fetch failed with status ${response.status}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const contentType = response.headers.get("content-type") || "application/octet-stream";
+        normalizedReferences.push(`data:${contentType};base64,${buffer.toString("base64")}`);
+      } catch (error) {
+        console.error("Failed to fetch reference URL", { url, error });
+      }
+    }
+  }
+
+  if (normalizedReferences.length > 0) {
+    input.image_input = normalizedReferences;
   }
 
   if (selectedAspectRatio) {

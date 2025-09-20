@@ -12,6 +12,7 @@ type CanvasWorkspaceProps = {
   onRetry?: (id: string) => void;
   onUpscale?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onAttachReference?: (id: string) => void;
 };
 
 const MIN_SCALE = 0.4;
@@ -23,7 +24,7 @@ type ViewportState = {
   offset: { x: number; y: number };
 };
 
-export function CanvasWorkspace({ items, onMove, onFocus, onRetry, onUpscale, onDelete }: CanvasWorkspaceProps) {
+export function CanvasWorkspace({ items, onMove, onFocus, onRetry, onUpscale, onDelete, onAttachReference }: CanvasWorkspaceProps) {
   const DEFAULT_SIDE = 192; // keep in sync with item-card sizing baseline
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
@@ -231,6 +232,7 @@ export function CanvasWorkspace({ items, onMove, onFocus, onRetry, onUpscale, on
               onRetry={onRetry}
               onUpscale={onUpscale}
               onDelete={onDelete}
+              onAttachReference={onAttachReference}
               zIndex={index + 1}
               scale={viewport.scale}
             />

@@ -6,7 +6,7 @@ import { generateTextToImage, upscaleImage } from "@/hooks/ssr/replicate";
 import { deleteImage } from "@/hooks/ssr/google";
 import { Sidebar } from "./sidebar";
 import { CanvasWorkspace } from "./canvas/workspace";
-import type { PromptSubmissionMeta } from "./prompt/prompt-dock";
+import type { PromptAttachedReference, PromptSubmissionMeta } from "./prompt/prompt-dock";
 import { PromptDock } from "./prompt/prompt-dock";
 
 type CanvasItemStatus = "pending" | "complete" | "error";
@@ -46,6 +46,7 @@ function clampImageCount(count: number) {
 export default function CanvasPage() {
   const [items, setItems] = useState<CanvasItem[]>([]);
   const [activeRequests, setActiveRequests] = useState(0);
+  const [attachedReferences, setAttachedReferences] = useState<PromptAttachedReference[]>([]);
 
   const handleMoveItem = useCallback((id: string, x: number, y: number) => {
     setItems((prev) =>
@@ -186,6 +187,38 @@ export default function CanvasPage() {
     }
   }, []);
 
+  const handleAttachReference = useCallback(
+    (id: string) => {
+      const source = items.find((item) => item.id === id);
+      if (!source || !source.imageUrl) {
+        console.warn("attachReference: source image unavailable", { id });
+        return;
+      }
+
+      setAttachedReferences((prev) => {
+        if (prev.some((reference) => reference.id === id)) {
+          return prev;
+        }
+
+        return [
+          ...prev,
+          {
+            id,
+            sourceItemId: id,
+            remoteUrl: source.imageUrl,
+            previewUrl: source.imageUrl,
+            label: source.prompt,
+          },
+        ];
+      });
+    },
+    [items]
+  );
+
+  const handleRemoveReference = useCallback((referenceId: string) => {
+    setAttachedReferences((prev) => prev.filter((reference) => reference.id !== referenceId));
+  }, []);
+
   const handlePromptSubmit = useCallback(
     async (formData: FormData, meta: PromptSubmissionMeta) => {
       const safeCount = clampImageCount(meta.numImages);
@@ -210,6 +243,7 @@ export default function CanvasPage() {
             },
             aspectRatio: meta.aspectRatio,
             createdAt: now + index,
+            parentId: meta.referenceSourceIds[0] ?? undefined,
             storage: undefined,
           });
         }
@@ -310,11 +344,14 @@ export default function CanvasPage() {
           onRetry={handleRetryItem}
           onUpscale={handleUpscaleItem}
           onDelete={handleDeleteItem}
+          onAttachReference={handleAttachReference}
         />
         <PromptDock
           models={IMAGE_GEN_MODELS}
           onSubmit={handlePromptSubmit}
           pending={activeRequests > 0}
+          attachedReferences={attachedReferences}
+          onRemoveReference={handleRemoveReference}
         />
       </div>
     </div>
