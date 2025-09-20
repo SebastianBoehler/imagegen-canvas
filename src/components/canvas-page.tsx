@@ -219,6 +219,10 @@ export default function CanvasPage() {
     setAttachedReferences((prev) => prev.filter((reference) => reference.id !== referenceId));
   }, []);
 
+  const handleClearReferences = useCallback(() => {
+    setAttachedReferences([]);
+  }, []);
+
   const handlePromptSubmit = useCallback(
     async (formData: FormData, meta: PromptSubmissionMeta) => {
       const safeCount = clampImageCount(meta.numImages);
@@ -352,6 +356,7 @@ export default function CanvasPage() {
           pending={activeRequests > 0}
           attachedReferences={attachedReferences}
           onRemoveReference={handleRemoveReference}
+          onClearReferences={handleClearReferences}
         />
       </div>
     </div>

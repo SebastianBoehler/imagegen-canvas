@@ -27,24 +27,19 @@ type PromptDockProps = {
   pending?: boolean;
   attachedReferences?: readonly PromptAttachedReference[];
   onRemoveReference?: (id: string) => void;
+  onClearReferences?: () => void;
 };
 
-export function PromptDock({ models, onSubmit, pending = false, attachedReferences = [], onRemoveReference }: PromptDockProps) {
+export function PromptDock({ models, onSubmit, pending = false, attachedReferences = [], onRemoveReference, onClearReferences }: PromptDockProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState(models[0] ?? "");
   const [numImages, setNumImages] = useState(1);
-  const [files, setFiles] = useState<File[]>([]);
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
 
   const modelOptions = useMemo(() => models.map((value) => ({ value, label: value })), [models]);
-
-  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const nextFiles = event.target.files ? Array.from(event.target.files) : [];
-    setFiles(nextFiles);
-  }, []);
 
   const handlePromptKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -57,7 +52,6 @@ export function PromptDock({ models, onSubmit, pending = false, attachedReferenc
   );
 
   const resetFileInput = useCallback(() => {
-    setFiles([]);
     const node = fileInputRef.current;
     if (node) {
       node.value = "";
@@ -108,7 +102,6 @@ export function PromptDock({ models, onSubmit, pending = false, attachedReferenc
       }
 
       setPrompt("");
-      setFiles([]);
       resetFileInput();
 
       const submission = onSubmit(formData, {
@@ -119,18 +112,19 @@ export function PromptDock({ models, onSubmit, pending = false, attachedReferenc
         referenceSourceIds: attachedReferences.map((reference) => reference.sourceItemId),
       });
 
+      onClearReferences?.();
+
       if (submission instanceof Promise) {
         submission.catch((error) => {
           console.error("Prompt submission failed", error);
         });
       }
     },
-    [aspectRatio, attachedReferences, model, onSubmit, resetFileInput]
+    [aspectRatio, attachedReferences, model, onClearReferences, onSubmit, resetFileInput]
   );
 
   const disableSubmit = !prompt.trim();
   const buttonLabel = "Generate";
-  const totalReferenceCount = files.length + attachedReferences.length;
 
   return (
     <form
@@ -139,6 +133,40 @@ export function PromptDock({ models, onSubmit, pending = false, attachedReferenc
       className="pointer-events-auto absolute bottom-6 left-1/2 flex w-full max-w-3xl -translate-x-1/2 flex-col gap-3 text-slate-200"
     >
       <div className="rounded-3xl border border-white/10 bg-slate-900/80 shadow-2xl shadow-black/50 backdrop-blur">
+        {attachedReferences.length > 0 ? (
+          <div className="px-4 pt-4">
+            <div className="flex flex-wrap gap-2">
+              {attachedReferences.map((reference) => {
+                const preview = reference.previewUrl ?? reference.remoteUrl;
+                return (
+                  <div
+                    key={reference.id}
+                    className="relative h-14 w-14 overflow-hidden rounded-md border border-white/10"
+                  >
+                    {/* Display thumbnail for attached reference (remote URL) */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={preview}
+                      alt={reference.label ?? "Reference image"}
+                      className="h-full w-full object-cover"
+                      draggable={false}
+                    />
+                    {onRemoveReference ? (
+                      <button
+                        type="button"
+                        onClick={() => onRemoveReference(reference.id)}
+                        className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[11px] font-semibold text-white/80 ring-1 ring-white/20 transition hover:bg-black/90"
+                        aria-label="Remove reference"
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
         <div className="flex items-end gap-4 px-4 pt-4">
           <textarea
             name="prompt"
@@ -183,49 +211,8 @@ export function PromptDock({ models, onSubmit, pending = false, attachedReferenc
               accept="image/*"
               multiple
               className="hidden"
-              onChange={handleFileChange}
             />
-            {totalReferenceCount > 0 ? (
-              <span className="text-[11px] text-slate-400">
-                {totalReferenceCount} reference{totalReferenceCount === 1 ? "" : "s"} attached
-              </span>
-            ) : null}
           </div>
-          {attachedReferences.length > 0 ? (
-            <div className="flex items-center gap-2 text-[11px] capitalize text-slate-300">
-              <span className="text-slate-400">Canvas refs</span>
-              <div className="flex items-center gap-2">
-                {attachedReferences.map((reference) => {
-                  const preview = reference.previewUrl ?? reference.remoteUrl;
-                  return (
-                    <div
-                      key={reference.id}
-                      className="relative h-8 w-8 overflow-hidden rounded-md border border-white/10"
-                    >
-                      {/* Display thumbnail for attached reference (remote URL) */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={preview}
-                        alt={reference.label ?? "Reference image"}
-                        className="h-full w-full object-cover"
-                        draggable={false}
-                      />
-                      {onRemoveReference ? (
-                        <button
-                          type="button"
-                          onClick={() => onRemoveReference(reference.id)}
-                          className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/70 text-[10px] font-semibold text-white/80 ring-1 ring-white/20 transition hover:bg-black/90"
-                          aria-label="Remove reference"
-                        >
-                          ×
-                        </button>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
           <div className="flex items-center gap-2 text-[11px] capitalize text-slate-300">
             <label htmlFor="model" className="text-slate-400">
               Model
@@ -256,10 +243,10 @@ export function PromptDock({ models, onSubmit, pending = false, attachedReferenc
               className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-100 outline-none transition hover:bg-white/10"
             >
               <option value="16:9" className="bg-slate-900 text-slate-100">
-                16:9 landscape
+                16:9
               </option>
               <option value="9:16" className="bg-slate-900 text-slate-100">
-                9:16 portrait
+                9:16
               </option>
             </select>
           </div>
