@@ -164,3 +164,19 @@
 "hygge photography"
 ]
 }
+
+{
+"prompt": "A vintage travel poster of Amalfi Coast, Italy. Bold colors and simplified forms depict cliffs with pastel houses above a turquoise sea. Retro typography announces 'Visit Amalfi'.",
+"negative_prompt": "photorealism, text overlay errors, watermark, logo",
+"style": "1930s vintage travel lithograph",
+"composition": {
+"shot": "stylized coastline",
+"angle": "slightly elevated seafront view",
+"foreground": "waves lapping at rocks",
+"background": "pastel houses on cliffs"
+},
+"color_palette": {
+"primary": ["turquoise blue", "terracotta orange", "cream white"],
+"secondary": ["pastel yellow", "green hillside"]
+}
+}

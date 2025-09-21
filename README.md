@@ -2,7 +2,7 @@
 
 An experimental canvas UI for orchestrating AI-assisted image generation. Arrange generations spatially, iterate with prompts, attach reference images, and compare multiple versions on a persistent canvas.
 
-![ImageGen Canvas screenshot](images/screenshot.png)
+![ImageGen Canvas screenshot](images/screenshot2.png)
 ![ImageGen Canvas screenshot 2](images/screenshot1.png)
 
 The app uses a collaborative workspace metaphor:
@@ -37,13 +37,13 @@ Prereqs:
 - [Bun](https://bun.sh) 1.1+
 - A Replicate API token
 
-1) Install deps
+1. Install deps
 
 ```bash
 bun install
 ```
 
-2) Configure environment
+2. Configure environment
 
 Create `.env.local` in the project root with your Replicate token and GCS bucket name:
 
@@ -52,7 +52,7 @@ REPLICATE_API_TOKEN=your_replicate_api_token_here
 GCS_BUCKET=your_public_bucket_name
 ```
 
-3) Run the app
+3. Run the app
 
 ```bash
 bun dev
@@ -125,4 +125,3 @@ See `agents.md` for upcoming ideas such as canvas zoom, richer right-click menus
 - Blank images: ensure `REPLICATE_API_TOKEN` is set and valid.
 - Images not loading: verify `next.config.ts` `images.remotePatterns` and that the URL host matches Replicate.
 - 429/limits: Replicate rate limiting may apply; reduce concurrent generations.
-
