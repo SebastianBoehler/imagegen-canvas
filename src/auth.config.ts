@@ -28,8 +28,8 @@ const config = {
     // },
   },
   pages: {
-    //signIn: "/login",
-    //signOut: "/logout",
+    signIn: "/login",
+    signOut: "/logout",
   },
 };
 
