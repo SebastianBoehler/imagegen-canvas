@@ -6,6 +6,7 @@ export const IMAGE_GEN_MODELS = [
   "black-forest-labs/flux-1.1-pro",
   "black-forest-labs/flux-krea-dev",
   "ideogram-ai/ideogram-v3-quality",
+  "luma/photon",
 ] as const satisfies readonly `${string}/${string}`[];
 
 export type ImageGenModel = (typeof IMAGE_GEN_MODELS)[number];
@@ -56,6 +57,9 @@ export const MODEL_INPUT_DEFAULTS: Partial<Record<ImageGenModel, Record<string, 
     disable_safety_checker: true,
   },
   "ideogram-ai/ideogram-v3-quality": {
+    aspect_ratio: "16:9",
+  },
+  "luma/photon": {
     aspect_ratio: "16:9",
   },
 };
