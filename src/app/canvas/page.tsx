@@ -8,7 +8,6 @@ export default async function Canvas() {
   if (!user) {
     return redirect("/login");
   }
-  console.log(user);
 
   return <CanvasPage />;
 }
