@@ -5,6 +5,7 @@ export const IMAGE_GEN_MODELS = [
   "bytedance/seedream-4",
   "black-forest-labs/flux-1.1-pro",
   "black-forest-labs/flux-krea-dev",
+  "stability-ai/stable-diffusion-3.5-large",
   "ideogram-ai/ideogram-v3-quality",
   "luma/photon",
 ] as const satisfies readonly `${string}/${string}`[];
@@ -55,6 +56,12 @@ export const MODEL_INPUT_DEFAULTS: Partial<Record<ImageGenModel, Record<string, 
     prompt_strength: 0.8,
     num_inference_steps: 35, // max 50
     disable_safety_checker: true,
+  },
+  "stability-ai/stable-diffusion-3.5-large": {
+    cfg: 4.5,
+    aspect_ratio: "16:9",
+    output_format: "png",
+    prompt_strength: 0.85,
   },
   "ideogram-ai/ideogram-v3-quality": {
     aspect_ratio: "16:9",
