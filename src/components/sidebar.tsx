@@ -1,6 +1,16 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const navItems = [
+  { href: "/canvas", label: "Canvas" },
+  { href: "/video-studio", label: "Video Studio" },
+] as const;
+
 export function Sidebar() {
+  const pathname = usePathname();
+
   return (
     <aside className="w-64 bg-slate-900/70 border-r border-white/5 backdrop-blur flex flex-col p-6 gap-8">
       <div>
@@ -11,12 +21,21 @@ export function Sidebar() {
         </p>
       </div>
       <nav className="flex flex-col gap-3 text-sm text-slate-300">
-        <button
-          type="button"
-          className="inline-flex items-center rounded-md bg-white/5 px-3 py-2 text-left hover:bg-white/10 transition"
-        >
-          Canvas
-        </button>
+        {navItems.map((item) => {
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              prefetch={false}
+              className={`inline-flex items-center rounded-md px-3 py-2 text-left transition ${
+                isActive ? "bg-white/10 text-white" : "hover:bg-white/10"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
     </aside>
   );

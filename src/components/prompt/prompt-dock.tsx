@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { ImageGenModel } from "@/hooks/replicate";
+import { optimizePrompt } from "@/hooks/ssr/replicate";
 
 const MAX_VARIATIONS = 5;
 
@@ -38,6 +39,7 @@ export function PromptDock({ models, onSubmit, pending = false, attachedReferenc
   const [model, setModel] = useState(models[0] ?? "");
   const [numImages, setNumImages] = useState(1);
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
+  const [isOptimizing, startOptimizing] = useTransition();
 
   const modelOptions = useMemo(() => models.map((value) => ({ value, label: value })), [models]);
 
@@ -122,6 +124,22 @@ export function PromptDock({ models, onSubmit, pending = false, attachedReferenc
     },
     [aspectRatio, attachedReferences, model, onClearReferences, onSubmit, resetFileInput]
   );
+
+  const handleImprovePrompt = useCallback(() => {
+    const currentPrompt = prompt.trim();
+    if (!currentPrompt) {
+      return;
+    }
+
+    startOptimizing(async () => {
+      try {
+        const optimized = await optimizePrompt(currentPrompt);
+        setPrompt(optimized);
+      } catch (error) {
+        console.error("Failed to optimize prompt", error);
+      }
+    });
+  }, [prompt]);
 
   const disableSubmit = !prompt.trim();
   const buttonLabel = "Generate";
@@ -268,6 +286,14 @@ export function PromptDock({ models, onSubmit, pending = false, attachedReferenc
               ))}
             </select>
           </div>
+          <button
+            type="button"
+            onClick={handleImprovePrompt}
+            disabled={!prompt.trim() || isOptimizing}
+            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium lowercase text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isOptimizing ? "Optimizing..." : "Improve prompt"}
+          </button>
         </div>
       </div>
     </form>

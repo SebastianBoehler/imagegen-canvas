@@ -1,7 +1,7 @@
 "use server";
 
 import Replicate from "replicate";
-import { IMAGE_GEN_MODELS, MODEL_INPUT_DEFAULTS, UPSCALER_MODEL } from "@/hooks/replicate";
+import { IMAGE_GEN_MODELS, MODEL_INPUT_DEFAULTS, UPSCALER_MODEL, TEXT_GEN_MODEL } from "@/hooks/replicate";
 import { saveImage } from "@/hooks/ssr/google";
 
 export type GenerateImagePayload = {
@@ -99,6 +99,95 @@ function normalizeOutput(output: unknown): string[] {
   return url ? [url] : [];
 }
 
+function normalizeVideoOutput(output: unknown): string[] {
+  const urls = normalizeOutput(output);
+  if (urls.length > 0) {
+    return urls;
+  }
+
+  if (output && typeof output === "object") {
+    const container = output as Record<string, unknown>;
+
+    if ("video" in container) {
+      const result = normalizeOutput(container.video);
+      if (result.length > 0) {
+        return result;
+      }
+    }
+
+    if ("videos" in container && Array.isArray(container.videos)) {
+      const aggregated = container.videos
+        .map((item) => normalizeOutput(item))
+        .flat()
+        .filter((url): url is string => Boolean(url));
+      if (aggregated.length > 0) {
+        return aggregated;
+      }
+    }
+
+    if ("output" in container && Array.isArray(container.output)) {
+      const aggregated = container.output
+        .map((item) => normalizeOutput(item))
+        .flat()
+        .filter((url): url is string => Boolean(url));
+      if (aggregated.length > 0) {
+        return aggregated;
+      }
+    }
+  }
+
+  return urls;
+}
+
+async function fileToDataUrl(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const contentType = file.type || "application/octet-stream";
+  return `data:${contentType};base64,${buffer.toString("base64")}`;
+}
+
+export async function optimizePrompt(userPrompt: string): Promise<string> {
+  if (!userPrompt || !userPrompt.trim()) {
+    throw new Error("Prompt is required for optimization");
+  }
+
+  const systemPrompt = `You are an expert at crafting detailed, effective prompts for AI image generation models. Given a user's input prompt, enhance it to be more descriptive, specific, and optimized for high-quality image generation. Focus on:
+
+- Adding relevant visual details (lighting, composition, style, mood)
+- Improving clarity and specificity
+- Maintaining the user's original intent
+- Keeping it concise (max 150 words)
+- For realistic image add information about the camera angle and the camera distance, lens type etc
+- Using terminology that works well with image generation models
+
+Return ONLY the improved JSON formatted prompt, without any explanation or preamble.`;
+
+  const input = {
+    top_p: 1,
+    prompt: `${systemPrompt}\n\nUser prompt: "${userPrompt.trim()}"\n\nImproved prompt:`,
+    max_tokens: 1024,
+    temperature: 0.7,
+    presence_penalty: 0,
+    frequency_penalty: 0,
+  };
+
+  let optimizedText = "";
+
+  try {
+    for await (const event of replicate.stream(TEXT_GEN_MODEL, { input })) {
+      optimizedText += event.toString();
+    }
+
+    const cleaned = optimizedText.trim();
+
+    // Return optimized prompt or fall back to original if empty
+    return cleaned.length > 0 ? cleaned : userPrompt.trim();
+  } catch (error) {
+    console.error("Failed to optimize prompt, using original", error);
+    return userPrompt.trim();
+  }
+}
+
 export async function generateTextToImage(formData: FormData): Promise<GenerateImageResponse> {
   const prompt = formData.get("prompt");
   const model = formData.get("model");
@@ -129,13 +218,11 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
 
   const referenceEntries = formData.getAll("references");
   const referenceFiles = referenceEntries.filter((file): file is File => file instanceof File && file.size > 0);
-  const referenceUrls = formData
-    .getAll("referenceUrls")
-    .filter((value): value is string => typeof value === "string" && value.length > 0);
+  const referenceUrls = formData.getAll("referenceUrls").filter((value): value is string => typeof value === "string" && value.length > 0);
 
   const input: Record<string, unknown> = {
     ...preset,
-    prompt,
+    prompt: prompt.trim(),
   };
 
   if (knownModel === "black-forest-labs/flux-krea-dev") {
@@ -199,7 +286,7 @@ export async function generateTextToImage(formData: FormData): Promise<GenerateI
   const uploaded = await Promise.all(
     images.map(async (url) => {
       try {
-        const result = await saveImage({ imageUrl: url, prompt });
+        const result = await saveImage({ imageUrl: url, prompt: prompt.trim() });
         return {
           url: result.publicUrl,
           storage: { bucket: result.bucket, objectName: result.objectName },
@@ -241,4 +328,75 @@ export async function upscaleImage(imageUrl: string, scale: number = 4): Promise
     console.error("Failed to upload upscaled image to GCS; falling back to original URL", err);
     return { url: first } satisfies GeneratedImage;
   }
+}
+
+export type GenerateVideoResponse = {
+  videoUrl: string;
+  durationSeconds: number;
+};
+
+export async function generateImageToVideo(formData: FormData): Promise<GenerateVideoResponse> {
+  const prompt = formData.get("prompt");
+  if (typeof prompt !== "string" || !prompt.trim()) {
+    throw new Error("Prompt is required");
+  }
+
+  const durationValue = formData.get("duration");
+  const parsedDuration = Number.parseFloat(typeof durationValue === "string" ? durationValue : String(durationValue ?? ""));
+  const durationSeconds = Number.isFinite(parsedDuration) ? Math.min(Math.max(parsedDuration, 1), 60) : 10;
+
+  const resolutionValue = formData.get("resolution");
+  const resolution = typeof resolutionValue === "string" && resolutionValue.trim().length > 0 ? resolutionValue : "1080p";
+
+  const negativePromptValue = formData.get("negative_prompt");
+  const negativePrompt = typeof negativePromptValue === "string" ? negativePromptValue.trim() : "";
+
+  const enablePromptExpansionValue = formData.get("enable_prompt_expansion");
+  const enablePromptExpansion = (() => {
+    if (typeof enablePromptExpansionValue === "string") {
+      const normalized = enablePromptExpansionValue.toLowerCase();
+      return normalized === "true" || normalized === "on" || normalized === "1";
+    }
+    return Boolean(enablePromptExpansionValue);
+  })();
+
+  const imageEntry = formData.get("image");
+  const imageDataEntry = formData.get("imageDataUrl");
+
+  let imageDataUrl: string | null = null;
+
+  if (typeof imageDataEntry === "string" && imageDataEntry.trim().length > 0) {
+    imageDataUrl = imageDataEntry.trim();
+  } else if (imageEntry instanceof File && imageEntry.size > 0) {
+    imageDataUrl = await fileToDataUrl(imageEntry);
+  }
+
+  if (!imageDataUrl) {
+    throw new Error("An input image is required");
+  }
+
+  const input: Record<string, unknown> = {
+    image: imageDataUrl,
+    prompt: prompt.trim(),
+    duration: durationSeconds,
+    resolution,
+    enable_prompt_expansion: enablePromptExpansion,
+  };
+
+  if (negativePrompt.length > 0) {
+    input.negative_prompt = negativePrompt;
+  }
+
+  const output = await replicate.run("wan-video/wan-2.5-i2v", { input });
+  const videos = normalizeVideoOutput(output);
+  const first = videos[0];
+
+  if (!first) {
+    throw new Error("Video generation returned no output");
+  }
+
+  return {
+    videoUrl: first,
+    durationSeconds,
+  } satisfies GenerateVideoResponse;
 }

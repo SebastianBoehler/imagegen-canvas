@@ -195,6 +195,8 @@ export default function CanvasPage() {
         return;
       }
 
+      const imageUrl = source.imageUrl;
+
       setAttachedReferences((prev) => {
         if (prev.some((reference) => reference.id === id)) {
           return prev;
@@ -205,10 +207,10 @@ export default function CanvasPage() {
           {
             id,
             sourceItemId: id,
-            remoteUrl: source.imageUrl,
-            previewUrl: source.imageUrl,
+            remoteUrl: imageUrl,
+            previewUrl: imageUrl,
             label: source.prompt,
-          },
+          } satisfies PromptAttachedReference,
         ];
       });
     },
