@@ -3,10 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const navItems = [
-  { href: "/canvas", label: "Canvas" },
-  { href: "/video-studio", label: "Video Studio" },
-] as const;
+const navItems = [{ href: "/canvas", label: "Canvas" }] as const;
 
 export function Sidebar() {
   const pathname = usePathname();
